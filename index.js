@@ -1,78 +1,103 @@
-const express = require('express')
-const bodyParser = require('body-parser')
-const app = express()
-const port = 5000
+const express = require('express');
+const bodyParser = require('body-parser');
+const { application } = require('express');
+const { v4: uuidv4} = require('uuid');
 var mysql = require('mysql');
-
-app.use(bodyParser.json())
-app.use(bodyParser.urlencoded({ extended: false }))
-
+ 
+const app = express();
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Origin, x-Requested-With, Content-Type, Accept, Authorization",
-  );
-  res.setHeader(
-    "Access-Control-Allow-Methonds",
-    "GET, POST, PUT, DELETE",
-  );
-  next();
-})
-app.use(express.json())
-
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+    );
+    res.setHeader(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, DELETE"
+    );
+    next();
+});
+app.use(express.json());
+ 
 var con = mysql.createConnection({
-  host: "korawit.ddns.net",
-  user: "webapp",
-  password: "secret2024",
-  port: "3307",
-  database: "shop"
+    host: "korawit.ddns.net",
+    user: "webapp",
+    password: "secret2024",
+    port : 3307,
+    database: "shop"
 });
-
-con.connect(function (err) {
-  if (err) throw err;
-});
-
-/* const products = [
-  { id: 0, name: "Notebook Acer Swift", price: 45900, img: "https://img.advice.co.th/images_nas/pic_product4/A0147295/A0147295_s.jpg" },
-  { id: 1, name: "Notebook Asus Vivo", price: 19900, img: "https://img.advice.co.th/images_nas/pic_product4/A0146010/A0146010_s.jpg" },
-  { id: 2, name: "Notebook Lenovo Ideapad", price: 32900, img: "https://img.advice.co.th/images_nas/pic_product4/A0149009/A0149009_s.jpg" },
-  { id: 3, name: "Notebook MSI Prestige", price: 54900, img: "https://img.advice.co.th/images_nas/pic_product4/A0149954/A0149954_s.jpg" },
-  { id: 4, name: "Notebook DELL XPS", price: 99900, img: "https://img.advice.co.th/images_nas/pic_product4/A0146335/A0146335_s.jpg" },
-  { id: 5, name: "Notebook HP Envy", price: 46900, img: "https://img.advice.co.th/images_nas/pic_product4/A0145712/A0145712_s.jpg" }
-  ];
- */
-
-app.get('/', (req, res) => {
-  res.send('Hello World!')
-})
-
-app.get('/api/products', (req, res) => {
-  con.query("SELECT * FROM products", function (err, result, fields) {
-    if (err) throw res.status(400).send('Not found any products');
-    console.log(result);
-    res.send(result);
-  });
-  /* if(products.length > 0)
-    res.send(products);
-  else
-    res.status(400).send("No products founds"); */
-});
-
-app.get('/api/products/:id', (req, res) => {
-  const id = req.params.id;
-  con.query("SELECT * FROM products where id=" + id, function (err, result, fields) {
+con.connect(function(err){
     if (err) throw err;
-    let product = result;
-    if (product.length > 0) {
-      res.send(product);
-    }else{
-      res.status(400).send('Not found product for' + id);
-    }
-  });
-
 });
-
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
-})
+ 
+// Get all products
+app.get('/api/products', function (req, res) {
+    con.query("SELECT * FROM products", function (err,result,fields) {
+        if (err) throw res.status(400).send('Not found any products');
+        console.log(result);
+        res.send(result);
+    });
+});
+ 
+// Get a specific product by ID
+app.get('/api/products/:id', function (req, res) {
+    const id = req.params.id;
+    con.query("SELECT * FROM products where id="+id, function (err,result,fields){
+        if (err) throw err;
+        let product=result;
+        if(product.length>0){
+            res.send(product);
+        }
+        else{
+            res.status(400).send('Not found any products for'+id);
+        }
+    });
+});
+ 
+app.post('/api/products', function (req, res) {
+    const name = req.body.name;
+    const price = req.body.price;
+    const img = req.body.img;
+    con.query(`insert into products (name,price,img) values('${name}','${price}','${img}')`, function (err,result,fields) {
+        if (err) throw res.status(400).send('Not cannot add products');
+        con.query("SELECT * FROM products", function (err,result,fields) {
+            if (err) throw res.status(400).send('Not found any products');
+            console.log(result);
+            res.send(result);
+        });
+    });
+});
+ 
+app.delete('/api/products/:id', function (req, res) {
+    const id = req.params.id;
+    con.query(`delete FROM products where id=${id}`, function (err,result,fields){
+        if (err) throw res.status(400).send('Not cannot delete products');
+        con.query("SELECT * FROM products", function (err,result,fields) {
+            if (err) throw res.status(400).send('Not found any products');
+            console.log(result);
+            res.send(result);
+        });
+    });
+});
+ 
+app.put('/api/products/:id', function (req, res) {
+    const id = req.params.id;
+    const name = req.body.name;
+    const price = req.body.price;
+    const img = req.body.img;
+    con.query(`update products SET name='${name}',price='${price}',img='${img}' where id=${id}`, function (err,result,fields){
+        if (err) throw res.status(400).send('Not cannot delete products');
+        con.query("SELECT * FROM products", function (err,result,fields) {
+            if (err) throw res.status(400).send('Not found any products');
+            console.log(result);
+            res.send(result);
+        });
+    });
+});
+ 
+const port = 5001;
+app.listen(port, function () {
+    console.log("Listening on port", port);
+});
